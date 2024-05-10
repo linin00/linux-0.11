@@ -45,20 +45,19 @@ ROOT_DEV = 0x306
 entry _start
 _start:
 	mov	ax,#BOOTSEG
-	mov	ds,ax
+	mov	ds,ax           ! ds是16位段寄存器，数据段寄存器，内存寻址时充当段基址
 	mov	ax,#INITSEG
-	mov	es,ax
+	mov	es,ax           ! 附加段
 	mov	cx,#256
-	sub	si,si
-	sub	di,di
-	rep
-	movw
-	jmpi	go,INITSEG
-go:	mov	ax,cs
-	mov	ds,ax
+	sub	si,si           ! 源变址
+	sub	di,di           ! 目的变址
+	rep movw            ! 从ds:si 处复制到 es:di处，复制256次，每次复制1个字，即两个字节
+	jmpi	go,INITSEG  ! 段间跳转指令，接下来将执行INITSEG:go处的指令
+go:	mov	ax,cs           ! cs 是代码段寄存器，CPU当前执行的代码在内存中的位置，由cs:ip配合指向，目前cs的值是INITSEG，ip的值是go
+	mov	ds,ax			! 因为代码被整体平移到INITSEG了，所以数据段寄存器也要更改
 	mov	es,ax
 ! put stack at 0x9ff00.
-	mov	ss,ax
+	mov	ss,ax			! ss是栈段寄存器，配合sp栈基址寄存器来表示此时的栈顶地址
 	mov	sp,#0xFF00		! arbitrary value >>512
 
 ! load the setup-sectors directly after the bootblock.
@@ -69,8 +68,8 @@ load_setup:
 	mov	cx,#0x0002		! sector 2, track 0
 	mov	bx,#0x0200		! address = 512, in INITSEG
 	mov	ax,#0x0200+SETUPLEN	! service 2, nr of sectors
-	int	0x13			! read it
-	jnc	ok_load_setup		! ok - continue
+	int	0x13			! 13号中断，read it
+	jnc	ok_load_setup	! ok - continue
 	mov	dx,#0x0000
 	mov	ax,#0x0000		! reset the diskette
 	int	0x13
